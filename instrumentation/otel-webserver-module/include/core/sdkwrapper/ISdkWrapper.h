@@ -1,5 +1,5 @@
 /*
-* Copyright 2021 AppDynamics LLC. 
+* Copyright 2022, OpenTelemetry Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 #include "sdkwrapper/IScopedSpan.h"
 #include "api/TenantConfig.h"
 
-namespace appd {
+namespace otel {
 namespace core {
 namespace sdkwrapper {
 
@@ -38,6 +38,8 @@ public:
 		const SpanKind& kind,
 		const OtelKeyValueMap& attributes,
 		const std::unordered_map<std::string, std::string>& carrier = {}) = 0;
+	
+	virtual std::string ReturnCurrentSpanId() = 0;
 
 	virtual void PopulatePropagationHeaders(
 		std::unordered_map<std::string, std::string>& carrier) = 0;
@@ -45,7 +47,7 @@ public:
 
 } //sdkwrapper
 } //core
-} //appd
+} //otel
 
 
 #endif

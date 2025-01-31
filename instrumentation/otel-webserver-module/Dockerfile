@@ -24,7 +24,7 @@ ARG LOG4CXX_VERSION="0.11.0"
 ARG GTEST_VERSION="1.10.0"
 ARG AUTOMAKE_VERSION="1.16.3"
 ARG PCRE_VERSION="8.44"
-ARG NGINX_VERSION="1.18.0"
+ARG NGINX_VERSION="1.26.0"
 
 
 # create default non-root user
@@ -117,7 +117,7 @@ RUN wget https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/sou
 
 #install Apr
 RUN mkdir -p dependencies/apr/${APR_VERSION} \
-    && wget https://dlcdn.apache.org//apr/apr-${APR_VERSION}.tar.gz --no-check-certificate \
+    && wget https://archive.apache.org/dist/apr/apr-${APR_VERSION}.tar.gz --no-check-certificate \
     && tar -xf apr-${APR_VERSION}.tar.gz \
     && cd apr-${APR_VERSION} \
     && ./configure --prefix=/dependencies/apr/${APR_VERSION} --enable-static=yes --enable-shared=no --with-pic && echo $? \
@@ -137,7 +137,7 @@ RUN mkdir -p dependencies/expat/${EXPAT_VERSION} \
 
 # install Apr-util
 RUN mkdir -p dependencies/apr-util/${APRUTIL_VERSION} \
-    && wget https://dlcdn.apache.org//apr/apr-util-${APRUTIL_VERSION}.tar.gz --no-check-certificate \
+    && wget https://archive.apache.org/dist/apr/apr-util-${APRUTIL_VERSION}.tar.gz --no-check-certificate \
     && tar -xf apr-util-${APRUTIL_VERSION}.tar.gz \
     && cd apr-util-${APRUTIL_VERSION} \
     && ./configure --prefix=/dependencies/apr-util/${APRUTIL_VERSION} --enable-static=yes --enable-shared=no --with-pic --with-apr=/dependencies/apr/${APR_VERSION} --with-expat=/dependencies/expat/${EXPAT_VERSION} && echo $? \
@@ -273,7 +273,7 @@ RUN cd /otel-webserver-module/build \
     && cd /
 
 RUN cp /otel-webserver-module/conf/nginx/opentelemetry_module.conf /opt/ \
-    && sed -i '8i load_module /opt/opentelemetry-webserver-sdk/WebServerModule/Nginx/ngx_http_opentelemetry_module.so;' /etc/nginx/nginx.conf \
+    && sed -i '8i load_module /opt/opentelemetry-webserver-sdk/WebServerModule/Nginx/1.26.0/ngx_http_opentelemetry_module.so;' /etc/nginx/nginx.conf \
     && sed -i '33i include /opt/opentelemetry_module.conf;' /etc/nginx/nginx.conf \ 
     && cd /
 

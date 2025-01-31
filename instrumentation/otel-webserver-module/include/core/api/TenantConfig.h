@@ -1,5 +1,5 @@
 /*
-* Copyright 2021 AppDynamics LLC. 
+* Copyright 2022, OpenTelemetry Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include <string>
 #include <iostream>
 
-namespace appd {
+namespace otel {
 namespace core {
 
 class TenantConfig
@@ -45,7 +45,9 @@ public:
     const std::string& getOtelLibraryVersion() const {return otelLibraryVersion;}
     const std::string& getOtelExporterType() const {return otelExporterType;}
     const std::string& getOtelExporterEndpoint() const {return otelExporterEndpoint;}
+    const std::string& getOtelExporterOtlpHeaders() const {return otelExporterOtlpHeaders;}
     const std::string& getOtelProcessorType() const {return otelProcessorType;}
+    const std::string& getOtelPropagatorType() const {return otelPropagatorType;}
     const unsigned getOtelMaxQueueSize() const {return otelMaxQueueSize;}
     const unsigned getOtelScheduledDelayMillis() const {return otelScheduledDelayMillis;}
     const unsigned getOtelExportTimeoutMillis() const {return otelExportTimeoutMillis;}
@@ -61,7 +63,9 @@ public:
     void setServiceInstanceId(const std::string& serviceInstanceId) { this->serviceInstanceId = serviceInstanceId; }
     void setOtelExporterType(const std::string& otelExporterType) { this->otelExporterType = otelExporterType; }
     void setOtelExporterEndpoint(const std::string& otelExporterEndpoint) { this->otelExporterEndpoint = otelExporterEndpoint; }
+    void setOtelExporterOtlpHeaders(const std::string& otelExporterOtlpHeaders) { this->otelExporterOtlpHeaders = otelExporterOtlpHeaders; }
     void setOtelProcessorType(const std::string& otelProcessorType) { this->otelProcessorType = otelProcessorType; }
+    void setOtelPropagatorType(const std::string& otelPropagatorType) { this->otelPropagatorType = otelPropagatorType; }
     void setOtelMaxQueueSize(const unsigned int otelMaxQueueSize) { this->otelMaxQueueSize = otelMaxQueueSize; }
     void setOtelScheduledDelayMillis(const unsigned int otelScheduledDelayMillis) { this->otelScheduledDelayMillis = otelScheduledDelayMillis; }
     void setOtelExportTimeoutMillis(const unsigned int otelExportTimeoutMillis) { this->otelExportTimeoutMillis = otelExportTimeoutMillis; }
@@ -80,8 +84,10 @@ private:
 
     std::string otelExporterType;
     std::string otelExporterEndpoint;
+    std::string otelExporterOtlpHeaders;
     bool otelSslEnabled;
     std::string otelSslCertPath;
+    std::string otelPropagatorType;
 
     std::string otelProcessorType;
     std::string otelSamplerType;
@@ -95,7 +101,7 @@ private:
     //: configuration options have not been added for these; as of now they will have their default vaules
 };
 
-inline std::ostream& operator<< (std::ostream &os, const appd::core::TenantConfig &config)
+inline std::ostream& operator<< (std::ostream &os, const otel::core::TenantConfig &config)
 {
     os  << "\n ServiceNamespace:                " << config.getServiceNamespace()
         << "\n ServiceName:                     " << config.getServiceName()
@@ -105,14 +111,16 @@ inline std::ostream& operator<< (std::ostream &os, const appd::core::TenantConfi
         << "\n OtelExporterType                 " << config.getOtelExporterType()
         << "\n OtelExporterEndpoint             " << config.getOtelExporterEndpoint()
         << "\n OtelProcessorType                " << config.getOtelProcessorType()
+        << "\n OtelPropagatorType               " << config.getOtelPropagatorType()
         << "\n OtelSamplerType                  " << config.getOtelSamplerType()
         << "\n OtelSslEnabled                   " << config.getOtelSslEnabled()
         << "\n OtelSslCertPath                  " << config.getOtelSslCertPath()
+        << "\n OtelExportOtlpHeaders            " << config.getOtelExporterOtlpHeaders()
         << "";
     return os;
 }
 
 } // core
-} // appd
+} // otel
 
 

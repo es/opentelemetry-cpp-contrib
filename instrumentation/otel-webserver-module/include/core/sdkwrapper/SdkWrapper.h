@@ -1,5 +1,5 @@
 /*
-* Copyright 2021 AppDynamics LLC. 
+* Copyright 2022, OpenTelemetry Authors.  
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 #include "AgentLogger.h"
 #include <memory>
 
-namespace appd {
+namespace otel {
 namespace core {
 namespace sdkwrapper {
 
@@ -41,6 +41,8 @@ public:
 	void PopulatePropagationHeaders(
 		std::unordered_map<std::string, std::string>& carrier) override;
 
+	std::string ReturnCurrentSpanId() override;
+
 private:
 	trace::SpanKind GetTraceSpanKind(const SpanKind& kind);
 
@@ -51,6 +53,6 @@ protected:
 
 } //sdkwrapper
 } //core
-} //appd
+} //otel
 
 #endif

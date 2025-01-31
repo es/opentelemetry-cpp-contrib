@@ -12,7 +12,7 @@ Refer to install instructions [INSTALL.md](../../INSTALL.md#building-as-standalo
 Modify step 2 to create `cmake` build configuration for compiling fluentd as below:
 
 ```console
-   $ cmake -DWITH_fluentd=ON ..
+   $ cmake ..
    -- The C compiler identification is GNU 9.3.0
    -- The CXX compiler identification is GNU 9.3.0
    ...
@@ -20,6 +20,33 @@ Modify step 2 to create `cmake` build configuration for compiling fluentd as bel
    -- Generating done
    -- Build files have been written to: /home/<user>/source/opentelemetry-cpp/build
    $
+```
+
+### VCPKG Integration
+
+If integrating with VCPKG, make sure the cmake invocation defines the additional CMAKE_TOOLCHAIN_FILE.
+
+For example:
+
+```console
+    $ .../opentelemetry-cpp-contrib2/exporters/fluentd$ ~/vcpkg/vcpkg install
+    $ .../opentelemetry-cpp-contrib2/exporters/fluentd$ cmake -D CMAKE_TOOLCHAIN_FILE=/home/niande/vcpkg/scripts/buildsystems/vcpkg.cmake
+    $ .../opentelemetry-cpp-contrib2/exporters/fluentd$ make
+```
+
+### Incorporating into an existing CMake Project
+
+To use the library from a CMake project, you can locate it directly with
+ `find_package` and use the imported targets from generated package
+ configurations. As of now, this will import targets for both `trace` and `logs`.
+
+```cmake
+# CMakeLists.txt
+find_package(opentelemetry-cpp CONFIG REQUIRED)
+find_package(opentelemetry-fluentd CONFIG REQUIRED)
+...
+target_include_directories(foo PRIVATE ${OPENTELEMETRY_CPP_FLUENTD_INCLUDE_DIRS})
+target_link_libraries(foo PRIVATE ${OPENTELEMETRY_CPP_LIBRARIES} ${OPENTELEMETRY_CPP_FLUENTD_LIBRARY_DIRS})
 ```
 
 ### Bazel Install Instructions

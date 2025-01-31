@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#define ENABLE_LOGS_PREVIEW 1
-
 #include "opentelemetry/exporters/fluentd/common/socket_tools.h"
 
 #include "opentelemetry/exporters/fluentd/trace/recordable.h"
 #include "opentelemetry/ext/http/common/url_parser.h"
 #include "opentelemetry/sdk/logs/exporter.h"
-#include "opentelemetry/sdk/logs/log_record.h"
+#include "opentelemetry/logs/log_record.h"
 
 #include <vector>
 
@@ -25,7 +23,7 @@ namespace fluentd_common = opentelemetry::exporter::fluentd::common;
 /**
  * The fluentd exporter exports span data in JSON format as expected by fluentd
  */
-class FluentdExporter final : public logs_sdk::LogExporter {
+class FluentdExporter final : public logs_sdk::LogRecordExporter {
 public:
   /**
    * Create a FluentdExporter using all default options.
@@ -51,6 +49,12 @@ public:
   sdk::common::ExportResult
   Export(const nostd::span<std::unique_ptr<logs_sdk::Recordable>>
              &logs) noexcept override;
+
+  bool ForceFlush(
+      std::chrono::microseconds timeout = (std::chrono::microseconds::max)()) noexcept override
+  {
+        return true;
+  }
 
   /**
    * Shut down the exporter.

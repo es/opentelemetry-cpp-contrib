@@ -26,7 +26,7 @@ ARG AUTOMAKE_VERSION="1.16.3"
 ARG PERL_VERSION="5.20.2"
 ARG PERL_CPANVERSION="5.0"
 ARG PCRE_VERSION="8.44"
-ARG NGINX_VERSION="1.22.0"
+ARG NGINX_VERSION="1.26.0"
 
 # create default non-root user
 RUN groupadd -r swuser && useradd -u 1000 -g swuser -m -s /sbin/nologin -c "default non-root user" swuser
@@ -35,6 +35,9 @@ RUN chmod -R 777 /opt
 
 # RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo
 
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
+    sed -i 's|# *baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
 # install required packages
 RUN yum update -y \
     && yum install -y \
@@ -42,27 +45,26 @@ RUN yum update -y \
     yum install -y zlib-devel \
     yum install -y openssl-devel \
     yum install java-1.8.0-openjdk -y \
+    yum install java-1.8.0-openjdk-devel \
     yum install pcre-devel -y \
     yum install xz -y \
     yum install httpd -y \
     && yum clean all
 
 # install lcov package
-RUN wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-    && yum install ./epel-release-latest-*.noarch.rpm -y \
+RUN wget https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm \
+    && yum install ./epel-release-*-*.noarch.rpm -y \
     && yum install lcov -y \
     && yum clean all
 
 # install devtoolset toolchain
-# RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo \
-#  && curl https://www.getpagespeed.com/files/centos6-epel-eol.repo --output /etc/yum.repos.d/epel.repo \
-  RUN yum -y install centos-release-scl \
-#  && curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl.repo \
-#  && curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo \
-  && yum install yum-utils -y \
-  && yum-config-manager --enable rhel-server-rhscl-7-rpms -y \
-  && yum install devtoolset-7 -y \
-  && yum clean all
+RUN yum -y install centos-release-scl \
+    && sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
+    sed -i 's|# *baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* \
+    && yum install yum-utils -y \
+    && yum-config-manager --enable rhel-server-rhscl-7-rpms -y \
+    && yum install devtoolset-7 -y \
+    && yum clean all
 ENV PATH="/opt/rh/devtoolset-7/root/usr/bin:${PATH}"
 
 # install python 2.7.8
@@ -123,7 +125,7 @@ RUN wget https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/sou
 
 #install Apr
 RUN mkdir -p dependencies/apr/${APR_VERSION} \
-    && wget https://dlcdn.apache.org//apr/apr-${APR_VERSION}.tar.gz --no-check-certificate \
+    && wget https://archive.apache.org/dist/apr/apr-${APR_VERSION}.tar.gz --no-check-certificate \
     && tar -xf apr-${APR_VERSION}.tar.gz \
     && cd apr-${APR_VERSION} \
     && ./configure --prefix=/dependencies/apr/${APR_VERSION} --enable-static=yes --enable-shared=no --with-pic && echo $? \
@@ -143,7 +145,7 @@ RUN mkdir -p dependencies/expat/${EXPAT_VERSION} \
 
 # install Apr-util
 RUN mkdir -p dependencies/apr-util/${APRUTIL_VERSION} \
-    && wget https://dlcdn.apache.org//apr/apr-util-${APRUTIL_VERSION}.tar.gz --no-check-certificate \
+    && wget https://archive.apache.org/dist/apr/apr-util-${APRUTIL_VERSION}.tar.gz --no-check-certificate \
     && tar -xf apr-util-${APRUTIL_VERSION}.tar.gz \
     && cd apr-util-${APRUTIL_VERSION} \
     && ./configure --prefix=/dependencies/apr-util/${APRUTIL_VERSION} --enable-static=yes --enable-shared=no --with-pic --with-apr=/dependencies/apr/${APR_VERSION} --with-expat=/dependencies/expat/${EXPAT_VERSION} && echo $? \
@@ -290,7 +292,7 @@ RUN cd /otel-webserver-module/build \
     && cd /
 
 RUN cp /otel-webserver-module/conf/nginx/opentelemetry_module.conf /opt/ \
-    && sed -i '8i load_module /opt/opentelemetry-webserver-sdk/WebServerModule/Nginx/1.22.0/ngx_http_opentelemetry_module.so;' /etc/nginx/nginx.conf \
+    && sed -i '8i load_module /opt/opentelemetry-webserver-sdk/WebServerModule/Nginx/1.26.0/ngx_http_opentelemetry_module.so;' /etc/nginx/nginx.conf \
     && sed -i '33i include /opt/opentelemetry_module.conf;' /etc/nginx/nginx.conf \ 
     && cd /
 

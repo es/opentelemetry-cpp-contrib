@@ -1,5 +1,5 @@
 /*
-* Copyright 2021 AppDynamics LLC. 
+* Copyright 2022, OpenTelemetry Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,10 +18,16 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 #include <stdbool.h>
-#include "../../include/core/api/AppdynamicsSdk.h"
+#include "../../include/core/api/OpentelemetrySdk.h"
 #include "../../include/core/api/opentelemetry_ngx_api.h"
 
 #define LOWEST_HTTP_ERROR_CODE 400
+#define STATUS_CODE_BYTE_COUNT 6
+static const int CONFIG_COUNT = 18; // Number of key value pairs in config
+static const int TRACE_ID_LEN = 32; // Length of trace_id
+static const int SPAN_ID_LEN = 16; // Length of span_id
+static const char NGINX_VARIABLE_IDENTIFIER = '$'; // Identifier for Nginx variables
+static const int ALL_PROPAGATION_HEADERS_COUNT = 16; // Length of span_id
 
 /*  The following enum has one-to-one mapping with
     otel_monitored_modules[] defined in .c file.
@@ -98,7 +104,17 @@ typedef struct {
     ngx_str_t   nginxModuleMatchpattern;
     ngx_str_t   nginxModuleSegmentType;
     ngx_str_t   nginxModuleSegmentParameter;
+    ngx_str_t   nginxModuleRequestHeaders;
+    ngx_str_t   nginxModuleResponseHeaders;
+    ngx_str_t   nginxModuleOtelExporterOtlpHeaders;
+    ngx_flag_t  nginxModuleTrustIncomingSpans;
+    ngx_array_t  *nginxModuleAttributes;
+    ngx_array_t  *nginxModuleIgnorePaths;
+    ngx_str_t nginxModulePropagatorType;
+    ngx_str_t nginxModuleOperationName;
+
 } ngx_http_opentelemetry_loc_conf_t;
+
 
 /*
     Configuration structure for storing information throughout the worker process life-time
@@ -114,9 +130,12 @@ typedef struct{
 }NGX_HTTP_OTEL_RECORDS;
 
 typedef struct {
-   APPD_SDK_HANDLE_REQ otel_req_handle_key;
-   APPD_SDK_ENV_RECORD* propagationHeaders;
-   int pheaderCount;
+    OTEL_SDK_HANDLE_REQ otel_req_handle_key;
+    OTEL_SDK_ENV_RECORD* propagationHeaders;
+    int pheaderCount;
+    ngx_str_t trace_id;
+    ngx_str_t root_span_id;
+    ngx_str_t tracing_context;
 }ngx_http_otel_handles_t;
 
 typedef struct{
@@ -135,19 +154,26 @@ static ngx_int_t ngx_http_opentelemetry_init(ngx_conf_t *cf);
 static ngx_int_t ngx_http_opentelemetry_init_worker(ngx_cycle_t *cycle);
 static void ngx_http_opentelemetry_exit_worker(ngx_cycle_t *cycle);
 static ngx_flag_t ngx_initialize_opentelemetry(ngx_http_request_t *r);
-static void fillRequestPayload(request_payload* req_payload, ngx_http_request_t* r, int* count);
+static void fillRequestPayload(request_payload* req_payload, ngx_http_request_t* r);
+static void fillResponsePayload(response_payload* res_payload, ngx_http_request_t* r);
 static void startMonitoringRequest(ngx_http_request_t* r);
 static void stopMonitoringRequest(ngx_http_request_t* r,
-        APPD_SDK_HANDLE_REQ request_handle_key);
-static APPD_SDK_STATUS_CODE otel_startInteraction(ngx_http_request_t* r, const char* module_name);
+        OTEL_SDK_HANDLE_REQ request_handle_key);
+static OTEL_SDK_STATUS_CODE otel_startInteraction(ngx_http_request_t* r, const char* module_name);
 static void otel_stopInteraction(ngx_http_request_t* r, const char* module_name,
-        APPD_SDK_HANDLE_REQ request_handle_key);
-static void otel_payload_decorator(ngx_http_request_t* r, APPD_SDK_ENV_RECORD* propagationHeaders, int count);
+        OTEL_SDK_HANDLE_REQ request_handle_key);
+static void otel_payload_decorator(ngx_http_request_t* r, OTEL_SDK_ENV_RECORD* propagationHeaders, int count);
 static ngx_flag_t otel_requestHasErrors(ngx_http_request_t* r);
 static ngx_uint_t otel_getErrorCode(ngx_http_request_t* r);
 static char* ngx_otel_context_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char* ngx_otel_attributes_set(ngx_conf_t* cf, ngx_command_t*, void* conf);
+static char* ngx_conf_ignore_path_set(ngx_conf_t* cf, ngx_command_t* cmd, void* conf);
+static char* ngx_conf_set_propagator(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) ;
 static void ngx_otel_set_global_context(ngx_http_opentelemetry_loc_conf_t * prev);
-
+static void ngx_otel_set_attributes(ngx_http_opentelemetry_loc_conf_t * prev, ngx_http_opentelemetry_loc_conf_t * conf);
+static void ngx_conf_merge_ignore_paths(ngx_http_opentelemetry_loc_conf_t * prev, ngx_http_opentelemetry_loc_conf_t * conf);
+static void removeUnwantedHeader(ngx_http_request_t* r);
+static void otel_variables_decorator(ngx_http_request_t* r);
 /*
     Module specific handler
 */
@@ -170,7 +196,7 @@ static ngx_int_t ngx_http_otel_mirror_handler(ngx_http_request_t *r);
 
 
 /*
-    Utility fuction to check if the given module is monitored by Appd Agent
+    Utility fuction to check if the given module is monitored by Opentelemetry Agent
 */
 
 static void traceConfig(ngx_http_request_t *r, ngx_http_opentelemetry_loc_conf_t* conf);
@@ -181,3 +207,8 @@ static char* computeContextName(ngx_http_request_t *r, ngx_http_opentelemetry_lo
 // static ngx_int_t ngx_http_opentelemetry_header_filter(ngx_http_request_t *r);
 // static ngx_int_t ngx_http_opentelemetry_body_filter(ngx_http_request_t *r, ngx_chain_t *in);
 
+static ngx_int_t ngx_http_opentelemetry_create_variables(ngx_conf_t *cf);
+ngx_int_t ngx_opentelemetry_initialise_trace_id(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
+ngx_int_t ngx_opentelemetry_initialise_span_id(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
+ngx_int_t ngx_opentelemetry_initialise_context_traceparent(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
+ngx_int_t ngx_opentelemetry_initialise_context_b3(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data);
